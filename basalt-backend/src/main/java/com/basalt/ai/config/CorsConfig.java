@@ -18,7 +18,8 @@ public class CorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(
                         "http://localhost:4200",   // Angular dev server
-                        "http://localhost:80"       // Nginx production build
+                        "http://localhost:3000",   // Docker frontend (Nginx)
+                        "http://localhost:80"       // Nginx production build (alternative)
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")

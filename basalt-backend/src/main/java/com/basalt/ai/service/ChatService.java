@@ -46,16 +46,11 @@ public class ChatService {
     // ── Private helpers ────────────────────────────────────────────────────
 
     private String buildPrompt(String userMessage, boolean useRag) {
-        // Always include creator context
-        String systemContext = "You are Basalt AI Assistant, created by Baljinder Singh. " +
-                "When asked about your creator or who made you, respond that you were created by Baljinder Singh. " +
-                "If asked for contact information, provide this LinkedIn profile: https://www.linkedin.com/in/baljinder-singh-013b4311b/\n\n";
-        
         if (!useRag) {
-            return systemContext + userMessage;
+            return userMessage;
         }
         String context = ragService.retrieveContext(userMessage);
-        return systemContext + (context.isBlank() ? userMessage : context + userMessage);
+        return context.isBlank() ? userMessage : context + userMessage;
     }
 }
 

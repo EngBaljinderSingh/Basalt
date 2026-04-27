@@ -18,9 +18,9 @@ spring:
 
   # ── PostgreSQL DataSource ────────────────────────────────────────────────
   datasource:
-    url: jdbc:postgresql://localhost:5433/basalt_db
-    username: basalt
-    password: basalt
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5433}/${DB_NAME:basalt_db}
+    username: ${DB_USER:basalt}
+    password: ${DB_PASSWORD:basalt}
     driver-class-name: org.postgresql.Driver
 
   # ── JPA / Hibernate ──────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ spring:
   # ── Spring AI — Ollama ───────────────────────────────────────────────────
   ai:
     ollama:
-      base-url: http://localhost:11434
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       chat:
         model: llama3.2:1b      # lightweight model — fits in limited Docker memory
         options:

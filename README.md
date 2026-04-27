@@ -82,51 +82,63 @@ Basalt/
 
 ## Quick Start
 
-### 1. Prerequisites
+### Option 1: Full Docker Deployment (Recommended)
 
-- Docker Desktop
-- Java 17+
-- Node.js 20+
-- Maven 3.9+
+**Prerequisites:** Docker Desktop only
 
-### 2. Start infrastructure
+1. **Start all services:**
+   ```powershell
+   .\start-docker.ps1
+   ```
 
+   This builds and runs everything: PostgreSQL, Ollama, Backend, and Frontend.
+
+2. **Pull LLM models** (first-time setup):
+   ```bash
+   docker exec basalt-ollama ollama pull llama3.2:1b
+   docker exec basalt-ollama ollama pull nomic-embed-text
+   ```
+
+3. **Access the app:**
+   - **Frontend:** http://localhost:3000
+   - **Backend API:** http://localhost:8080/api
+
+**Stop all services:**
 ```bash
-docker compose up -d
+docker compose down
 ```
 
-This starts PostgreSQL (port 5432) and Ollama (port 11434).
+---
 
-### 3. Pull LLM models
+### Option 2: Local Development Mode
 
-```bash
-# Chat model
-docker exec basalt-ollama ollama pull llama3.1
+**Prerequisites:** Docker Desktop, Java 17+, Node.js 20+, Maven 3.9+
 
-# Embedding model (required for RAG)
-docker exec basalt-ollama ollama pull nomic-embed-text
-```
+1. **Start infrastructure** (Postgres + Ollama):
+   ```bash
+   docker compose up -d postgres ollama
+   ```
 
-> Swap to `deepseek-r1` by changing `spring.ai.ollama.chat.model` in `application.yml`.
+2. **Pull LLM models:**
+   ```bash
+   docker exec basalt-ollama ollama pull llama3.2:1b
+   docker exec basalt-ollama ollama pull nomic-embed-text
+   ```
 
-### 4. Start the backend
+3. **Start the backend:**
+   ```bash
+   cd basalt-backend
+   mvn spring-boot:run
+   ```
+   Backend runs at `http://localhost:8080/api`
 
-```bash
-cd basalt-backend
-mvn spring-boot:run
-```
-
-Backend runs at `http://localhost:8080/api`
-
-### 5. Start the frontend
-
-```bash
-cd basalt-frontend
-npm install
-npm start
-```
-
-Frontend runs at `http://localhost:4200`
+4. **Start the frontend:**
+   ```bash
+   cd basalt-frontend
+   npm install
+   npm start
+   ```
+   Frontend runs at `http://localhost:4200`
 
 ---
 

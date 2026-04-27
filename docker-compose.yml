@@ -1,7 +1,7 @@
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Basalt — Docker Compose Stack
-# Services: PostgreSQL + pgvector, Ollama (optional GPU passthrough)
+# Basalt — Full Stack Docker Compose
+# Services: PostgreSQL + pgvector, Ollama, Spring Boot Backend, Angular Frontend
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
@@ -25,6 +25,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - basalt-network
 
   # ── Ollama — Local LLM Engine ───────────────────────────────────────────────
   # Comment the `deploy` section if you do not have an NVIDIA GPU.
@@ -37,6 +39,8 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+    networks:
+      - basalt-network
     # ── NVIDIA GPU passthrough (uncomment if you have an NVIDIA GPU) ──────────
     # deploy:
     #   resources:
@@ -46,7 +50,55 @@ services:
     #           count: all
     #           capabilities: [gpu]
 
+  # ── Spring Boot Backend ─────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./basalt-backend
+      dockerfile: Dockerfile
+    container_name: basalt-backend
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: basalt_db
+      DB_USER: basalt
+      DB_PASSWORD: basalt
+      OLLAMA_BASE_URL: http://ollama:11434
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    networks:
+      - basalt-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ── Angular Frontend ────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./basalt-frontend
+      dockerfile: Dockerfile
+    container_name: basalt-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - basalt-network
+
 volumes:
   postgres_data:
   ollama_data:
+
+networks:
+  basalt-network:
+    driver: bridge
 
