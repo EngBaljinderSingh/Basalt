@@ -64,14 +64,14 @@ public class ImageController {
                     
                     // Provide helpful error messages based on error type
                     String userMessage;
-                    if (errorMsg.contains("429") || errorMsg.contains("Too Many Requests")) {
-                        userMessage = "AI Horde is currently rate-limiting requests. Please try again in a few minutes.";
-                    } else if (errorMsg.contains("403") || errorMsg.contains("FORBIDDEN")) {
-                        userMessage = "AI Horde requires kudos for this request. Try smaller dimensions (max 512x512) or wait a few minutes.";
-                    } else if (errorMsg.contains("530") || errorMsg.contains("503")) {
+                    if (errorMsg != null && (errorMsg.contains("429") || errorMsg.contains("Too Many Requests"))) {
+                        userMessage = "AI Horde is temporarily overloaded. Retried up to 3 times. Please try again in 1-2 minutes.";
+                    } else if (errorMsg != null && (errorMsg.contains("403") || errorMsg.contains("FORBIDDEN"))) {
+                        userMessage = "AI Horde requires kudos for this request. Try smaller dimensions (max 512x512) or wait a few minutes for credit regeneration.";
+                    } else if (errorMsg != null && (errorMsg.contains("530") || errorMsg.contains("503"))) {
                         userMessage = "Image generation service is temporarily unavailable. Please try again later.";
                     } else {
-                        userMessage = "Image generation failed: " + errorMsg;
+                        userMessage = "Image generation failed. Please try again with a simpler prompt or smaller image dimensions.";
                     }
                     
                     return Mono.just(ResponseEntity

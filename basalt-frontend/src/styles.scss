@@ -34,8 +34,15 @@
   .prose.prose-basalt {
     /* Code blocks */
     pre {
-      @apply bg-basalt-surface2 rounded-xl overflow-x-auto my-3 p-4 text-xs;
+      @apply block bg-basalt-surface2 rounded-xl overflow-x-auto my-3 p-4 text-xs;
       border: 1px solid theme('colors.basalt.border');
+      white-space: pre;
+    }
+
+    pre code {
+      @apply block font-mono text-xs;
+      background: transparent;
+      padding: 0;
     }
 
     /* Inline code */
@@ -73,6 +80,11 @@
     hr {
       @apply border-basalt-border my-4;
     }
+  }
+
+  /* Ensure highlight.js does not override the code-box container style. */
+  .prose.prose-basalt pre.hljs {
+    background: theme('colors.basalt.surface2');
   }
 }
 

@@ -130,18 +130,20 @@ export class ChatComponent implements AfterViewChecked {
     // 1. Add user message
     this.addMessage('user', event.text);
 
-    if (event.isImageRequest) {
-      this.handleImageRequest(event.text);
+    const imagePrompt = this.getImagePrompt(event.text, event.isImageRequest);
+
+    if (imagePrompt) {
+      this.handleImageRequest(imagePrompt);
     } else {
       this.handleChatRequest(event.text, event.useRag);
     }
   }
 
   sendSuggestion(text: string): void {
-    const isImage = text.toLowerCase().startsWith('generate an image');
     this.addMessage('user', text);
-    if (isImage) {
-      this.handleImageRequest(text.replace(/^generate an image:\s*/i, ''));
+    const imagePrompt = this.getImagePrompt(text);
+    if (imagePrompt) {
+      this.handleImageRequest(imagePrompt);
     } else {
       this.handleChatRequest(text, false);
     }
@@ -203,6 +205,33 @@ export class ChatComponent implements AfterViewChecked {
         this.isStreaming = false;
       },
     });
+  }
+
+  private getImagePrompt(text: string, explicitImageMode = false): string | null {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+
+    if (explicitImageMode) {
+      return trimmed;
+    }
+
+    const normalized = trimmed.replace(/[.!?]+$/, '');
+    const patterns = [
+      /^generate\s+an?\s+image\s*:\s*(.+)$/i,
+      /^(?:generate|create|make|draw|paint|render|illustrate)\s+(?:an?\s+)?(?:image|picture|photo|illustration|drawing|artwork|render)(?:\s+of|\s+for)?\s+(.+)$/i,
+      /^(?:generate|create|make|draw|paint|render|illustrate)\s+(.+?)\s+(?:image|picture|photo|illustration|drawing|artwork|render)$/i,
+      /^(?:image|picture|photo|illustration|drawing|artwork|render)\s+of\s+(.+)$/i,
+    ];
+
+    for (const pattern of patterns) {
+      const match = normalized.match(pattern);
+      const prompt = match?.[1]?.trim();
+      if (prompt) {
+        return prompt;
+      }
+    }
+
+    return null;
   }
 
   private addMessage(role: ChatMessage['role'], content: string): ChatMessage {

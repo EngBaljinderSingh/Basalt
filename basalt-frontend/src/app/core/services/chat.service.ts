@@ -64,22 +64,38 @@ export class ChatService {
 
               // Accumulate decoded text so partial SSE frames aren't lost
               buffer += decoder.decode(value, { stream: true });
-              const parts = buffer.split('\n');
-              // Last element may be an incomplete line — keep it in the buffer
-              buffer = parts.pop() ?? '';
+              // Parse complete SSE events while preserving markdown newlines.
+              buffer = buffer.replace(/\r\n/g, '\n');
+              let boundary = buffer.indexOf('\n\n');
 
-              for (const line of parts) {
-                if (line.startsWith('data:')) {
-                  const token = line.slice(5); // preserve leading spaces
-                  const trimmed = token.trim();
-                  if (trimmed === '[DONE]') {
-                    subject.complete();
-                    return;
+              while (boundary !== -1) {
+                const eventChunk = buffer.slice(0, boundary);
+                buffer = buffer.slice(boundary + 2);
+
+                const dataLines: string[] = [];
+                for (const rawLine of eventChunk.split('\n')) {
+                  if (!rawLine.startsWith('data:')) {
+                    continue;
                   }
-                  if (trimmed) {
-                    subject.next(token);
-                  }
+
+                  // SSE allows a single optional space after ':'
+                  const lineValue = rawLine.startsWith('data: ')
+                    ? rawLine.slice(6)
+                    : rawLine.slice(5);
+                  dataLines.push(lineValue);
                 }
+
+                const token = dataLines.join('\n');
+                if (token === '[DONE]') {
+                  subject.complete();
+                  return;
+                }
+
+                if (dataLines.length > 0) {
+                  subject.next(token);
+                }
+
+                boundary = buffer.indexOf('\n\n');
               }
 
               pump();
