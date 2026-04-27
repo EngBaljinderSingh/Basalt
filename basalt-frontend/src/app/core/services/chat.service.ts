@@ -77,11 +77,8 @@ export class ChatService {
                   if (!rawLine.startsWith('data:')) {
                     continue;
                   }
-
-                  // SSE allows a single optional space after ':'
-                  const lineValue = rawLine.startsWith('data: ')
-                    ? rawLine.slice(6)
-                    : rawLine.slice(5);
+                  // Keep payload exactly as sent so token spacing is preserved.
+                  const lineValue = rawLine.slice(5);
                   dataLines.push(lineValue);
                 }
 

@@ -5,11 +5,15 @@ import com.basalt.ai.service.ImageGenerationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Mono;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -37,6 +41,7 @@ import java.util.Map;
 public class ImageController {
 
     private final ImageGenerationService imageService;
+    private final WebClient.Builder webClientBuilder;
 
     /**
      * Generates an AI image from a natural-language prompt.
@@ -57,7 +62,10 @@ public class ImageController {
 
         return imageService
                 .generateImage(request.getPrompt(), request.getWidth(), request.getHeight())
-                .map(imageUrl -> ResponseEntity.ok(Map.of("imageUrl", imageUrl)))
+                .map(imageUrl -> {
+                    String proxiedUrl = "/api/images/proxy?url=" + java.net.URLEncoder.encode(imageUrl, StandardCharsets.UTF_8);
+                    return ResponseEntity.ok(Map.of("imageUrl", proxiedUrl));
+                })
                 .onErrorResume(ex -> {
                     String errorMsg = ex.getMessage();
                     log.error("Image generation failed: {}", errorMsg);
@@ -78,5 +86,42 @@ public class ImageController {
                             .status(HttpStatus.BAD_GATEWAY)
                             .body(Map.of("error", userMessage)));
                 });
+    }
+
+    /**
+     * Proxies externally generated images through this backend so the frontend
+     * can always load them from same-origin (/api), avoiding browser-side
+     * loading issues with third-party hosts.
+     */
+    @GetMapping(value = "/proxy", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public Mono<ResponseEntity<byte[]>> proxyImage(@RequestParam("url") String encodedUrl) {
+        String decodedUrl = URLDecoder.decode(encodedUrl, StandardCharsets.UTF_8);
+
+        // Minimal allow-list to avoid open proxy abuse.
+        if (!decodedUrl.startsWith("https://image.pollinations.ai/")) {
+            return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).build());
+        }
+
+        return webClientBuilder.build()
+                .get()
+                .uri(decodedUrl)
+                .retrieve()
+                .toEntity(byte[].class)
+                .map(entity -> {
+                    byte[] body = entity.getBody() == null ? new byte[0] : entity.getBody();
+                    String remoteType = entity.getHeaders().getFirst("Content-Type");
+                    MediaType mediaType = MediaType.IMAGE_JPEG;
+                    if (remoteType != null) {
+                        try {
+                            mediaType = MediaType.parseMediaType(remoteType);
+                        } catch (Exception ignored) {
+                            // fallback to jpeg
+                        }
+                    }
+                    return ResponseEntity.ok()
+                            .contentType(mediaType)
+                            .body(body);
+                })
+                .onErrorResume(ex -> Mono.just(ResponseEntity.status(HttpStatus.BAD_GATEWAY).build()));
     }
 }
